@@ -1,0 +1,2 @@
+[functions.oldest-nudge]
+verify_jwt = false

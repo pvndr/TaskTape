@@ -1,0 +1,335 @@
+@import "tailwindcss";
+@import "@fontsource/caveat/latin-400.css";
+@import "@fontsource/caveat/latin-700.css";
+
+@theme {
+  --color-tape-cream: #fbf7ee;
+  --color-tape-red: #f8c8c8;
+  --color-tape-mustard: #fae498;
+  --color-tape-teal: #bfe8e5;
+  --color-tape-sage: #cde3c7;
+  --color-kraft: #d8c29d;
+  --color-kraft-deep: #c4ab82;
+  --color-kraft-card: #e4d3b6;
+  --color-kraft-dark: #2b1d0f;
+  --color-kraft-border: #b89b70;
+  --font-hand: 'Caveat', cursive, system-ui;
+}
+
+/* Base styling with kraft paper texture tone and subtle grain */
+html, body {
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--color-kraft);
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.14) 0%, transparent 70%),
+    radial-gradient(circle at 100% 100%, rgba(0, 0, 0, 0.06) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.055'/%3E%3C/svg%3E");
+  color: var(--color-kraft-dark);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+#root {
+  height: 100%;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Touch momentum scrolling utility with overscroll containment */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Authentic torn masking tape edges polygon */
+.torn-tape {
+  clip-path: polygon(
+    0% 0%,
+    100% 0%,
+    98.8% 12%,
+    100% 24%,
+    98.5% 36%,
+    100% 50%,
+    98.4% 64%,
+    100% 78%,
+    98.6% 90%,
+    100% 100%,
+    0% 100%,
+    1.4% 88%,
+    0% 76%,
+    1.6% 62%,
+    0% 48%,
+    1.5% 34%,
+    0% 20%,
+    1.2% 8%
+  );
+}
+
+/* Soft realistic drop shadow contouring the irregular torn tape edges */
+.tape-shadow-wrapper {
+  filter: drop-shadow(0 2px 3px rgba(43, 27, 13, 0.16))
+          drop-shadow(0 4px 8px rgba(43, 27, 13, 0.10));
+}
+
+.tape-shadow {
+  box-shadow: 0 1px 3px rgba(43, 29, 15, 0.18), 0 3px 8px rgba(43, 29, 15, 0.1);
+}
+
+.tape-shadow-sm {
+  box-shadow: 0 1px 2px rgba(43, 29, 15, 0.15);
+}
+
+/* Animations under 400ms */
+@keyframes slideSettle {
+  0% {
+    transform: translateY(16px) scale(0.97);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-slide-settle {
+  animation: slideSettle 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Marker strike-through line */
+.marker-line {
+  position: relative;
+}
+
+.marker-line::after {
+  content: '';
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 54%;
+  height: 2.5px;
+  background: #3b2818;
+  opacity: 0.85;
+  border-radius: 2px;
+  transform: rotate(-0.5deg);
+  transform-origin: left center;
+  animation: drawMarker 220ms ease-out forwards;
+}
+
+@keyframes drawMarker {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: calc(100% + 4px);
+  }
+}
+
+/* Tape tear paper ripping animation under 400ms */
+@keyframes tapeTearPeel {
+  0% {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  20% {
+    /* Right end peels up with lift tension */
+    transform: rotate(2deg) translateY(-4px) scale(1.02);
+  }
+  50% {
+    /* Jagged rip snap */
+    transform: rotate(-3deg) translateY(-8px) skewX(-2deg) scale(0.98);
+    opacity: 0.9;
+  }
+  100% {
+    /* Torn away off the kraft board */
+    transform: translateY(-24px) rotate(7deg) scale(0.88);
+    opacity: 0;
+  }
+}
+
+.animate-tape-tear {
+  animation: tapeTearPeel 320ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+/* Jagged tear line that rips vertically across the tape strip */
+@keyframes tearRipSlash {
+  0% {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 0%, 0% 0%);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+    opacity: 1;
+  }
+}
+
+.animate-tear-slash {
+  animation: tearRipSlash 160ms ease-out forwards;
+}
+
+/* Press & Smooth Down Undo Animation (~300ms) */
+@keyframes pressDownSettle {
+  0% {
+    scale: 1.05;
+    opacity: 0.9;
+  }
+  60% {
+    scale: 0.985;
+    opacity: 1;
+  }
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+}
+
+.animate-press-restore {
+  animation: pressDownSettle 300ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* Translucent sheen wave sweeping left to right across torn tape */
+.tape-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.tape-sheen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 60%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  animation: sheenWave 300ms ease-out forwards;
+}
+
+@keyframes sheenWave {
+  0% {
+    transform: translateX(-150%) skewX(-15deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.85;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(250%) skewX(-15deg);
+    opacity: 0;
+  }
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-press-restore,
+  .animate-tape-snap {
+    animation: none !important;
+    scale: 1 !important;
+  }
+  .animate-marker-write {
+    animation: none !important;
+    clip-path: none !important;
+    opacity: 1 !important;
+  }
+  .tape-sheen::after {
+    animation: none !important;
+    display: none !important;
+  }
+  .animate-slide-settle,
+  .animate-tape-tear,
+  .animate-tear-slash,
+  .animate-gentle-glow {
+    animation: none !important;
+  }
+}
+
+/* Gentle glow animation for highlighted task strip (~1.2s, no shaking) */
+@keyframes gentleGlow {
+  0% {
+    filter: drop-shadow(0 2px 3px rgba(43, 27, 13, 0.16));
+  }
+  30% {
+    filter: drop-shadow(0 0 14px rgba(245, 175, 45, 0.85))
+            drop-shadow(0 0 5px rgba(245, 175, 45, 0.95));
+  }
+  70% {
+    filter: drop-shadow(0 0 10px rgba(245, 175, 45, 0.7));
+  }
+  100% {
+    filter: drop-shadow(0 2px 3px rgba(43, 27, 13, 0.16));
+  }
+}
+
+.animate-gentle-glow {
+  animation: gentleGlow 1.2s ease-in-out;
+}
+
+/* Fresh Tape Snap Down (Phase 1: 0-160ms) */
+@keyframes tapeSnapDown {
+  0% {
+    scale: 1.05;
+    opacity: 0.2;
+  }
+  65% {
+    scale: 0.99;
+    opacity: 1;
+  }
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+}
+
+.animate-tape-snap {
+  animation: tapeSnapDown 160ms cubic-bezier(0.2, 0.9, 0.4, 1) forwards;
+}
+
+/* Wet Marker Write-In (Phase 2: 140-340ms)
+   Extended polygon box (-35% to 135%) preserves tall Caveat ascenders & descenders */
+@keyframes markerWriteIn {
+  0% {
+    clip-path: polygon(-5% -35%, 0% -35%, 0% 135%, -5% 135%);
+    opacity: 0.1;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    clip-path: polygon(-5% -35%, 105% -35%, 105% 135%, -5% 135%);
+    opacity: 1;
+  }
+}
+
+.animate-marker-write {
+  animation: markerWriteIn 200ms ease-out 140ms both;
+}
+
+/* Safe area insets */
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.pt-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
