@@ -34,9 +34,23 @@ import {
 } from './lib/recurring';
 import RecurringPrompt from './components/RecurringPrompt';
 import RecurringSection from './components/RecurringSection';
+import { BuddyProvider, useBuddy, Buddy } from './buddy';
 
-export default function App() {
+function AppContent() {
+  const buddy = useBuddy();
+
   const isDemo = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('reset') === 'true') {
+        localStorage.removeItem('tasktape_buddy_greeting_demo-user');
+        sessionStorage.removeItem('tasktape_buddy_session_welcomed');
+        sessionStorage.removeItem('tasktape_buddy_last_active');
+      }
+    }
+  }, []);
 
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -128,6 +142,9 @@ export default function App() {
       if (document.visibilityState === 'visible') {
         setCurrentDate(new Date());
         evaluateNudge();
+        if (userId) {
+          buddy.onUserResumeSession?.(userId);
+        }
       }
     };
 
@@ -158,6 +175,28 @@ export default function App() {
       evaluateNudge(tasks, isAddBarFocused);
     }
   }, [tasks, tasksLoading, userId, isAddBarFocused, evaluateNudge]);
+
+  // Natural once-per-day Buddy companion greeting
+  useEffect(() => {
+    if (userId) {
+      buddy.checkDailyGreeting(userId);
+    }
+  }, [userId, buddy]);
+
+  // Periodic task reminder evaluation (subject to strict non-annoying cooldowns)
+  useEffect(() => {
+    if (!userId || tasksLoading || tasks.length === 0) return;
+
+    const isBannerVisible = Boolean(activeNudgeTask && !isAddBarFocused);
+    buddy.evaluateTaskReminders(tasks, isBannerVisible);
+
+    const reminderInterval = setInterval(() => {
+      const currentlyVisible = Boolean(activeNudgeTask && !isAddBarFocused);
+      buddy.evaluateTaskReminders(tasks, currentlyVisible);
+    }, 45000);
+
+    return () => clearInterval(reminderInterval);
+  }, [userId, tasks, tasksLoading, activeNudgeTask, isAddBarFocused, buddy]);
 
   // Handle visualViewport for mobile virtual keyboard resize and no layout shift
   useEffect(() => {
@@ -651,6 +690,7 @@ export default function App() {
     const previousTasks = [...tasks];
     const updatedTasks = [newTask, ...tasks];
     setTasks(updatedTasks);
+    buddy.onTaskCreated(title);
 
     // Check for 3-day consecutive streak
     const hasStreak = checkThreeDayStreak(title, updatedTasks, recurringTasks, new Date());
@@ -739,6 +779,10 @@ export default function App() {
     if (!userId) return;
 
     if (nextDone) {
+      const targetTask = tasks.find((t) => t.id === id);
+      const remainingCount = tasks.filter((t) => !t.deleted_at && t.id !== id && !t.done).length;
+      buddy.onTaskCompleted(targetTask?.title, remainingCount);
+
       const oldestActive = getOldestActiveTask(tasks);
       if (oldestActive && oldestActive.id === id) {
         showToast('Nice, that was the longest-waiting one.', 'info');
@@ -746,6 +790,9 @@ export default function App() {
           setActiveNudgeTask(null);
         }
       }
+    } else {
+      const targetTask = tasks.find((t) => t.id === id);
+      buddy.onTaskUncompleted?.(targetTask?.title);
     }
 
     const previousTasks = [...tasks];
@@ -959,7 +1006,7 @@ export default function App() {
       />
 
       {/* Main content wrapper */}
-      <div className="flex-1 min-h-0 flex flex-col w-full max-w-md mx-auto overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col w-full max-w-md mx-auto overflow-hidden relative">
         {/* Header */}
         <header className="shrink-0 pt-safe px-4 py-3 flex items-center justify-between border-b border-kraft-border/30">
           <div className="flex items-center gap-2">
@@ -1024,7 +1071,7 @@ export default function App() {
               </div>
 
               {/* Task Strips List with Oldest Task Nudge directly above */}
-              <div className="flex-1 min-h-0 overflow-y-auto px-1 py-1 scroll-touch">
+              <div className="flex-1 min-h-0 overflow-y-auto px-1 py-1 scroll-touch pb-28">
                 {streakPrompt && !isAddBarFocused && (
                   <RecurringPrompt
                     title={streakPrompt.title}
@@ -1071,6 +1118,9 @@ export default function App() {
         </main>
       </div>
 
+      {/* Buddy Companion Layer: living character anchored beside task board / bottom-right */}
+      {session && <Buddy />}
+
       {/* Add Bar pinned to bottom when signed in */}
       {session && (
         <AddBar
@@ -1081,3 +1131,12 @@ export default function App() {
     </div>
   );
 }
+
+export default function App() {
+  return (
+    <BuddyProvider>
+      <AppContent />
+    </BuddyProvider>
+  );
+}
+
