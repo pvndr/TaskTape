@@ -12,6 +12,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { useBuddy } from './BuddyContext';
 import { BuddyState, BuddyPosition, BuddyPhase } from './types';
 
@@ -28,7 +29,42 @@ const PHASE_LABEL = {
 };
 
 export default function BuddyDevPanel({ className = '' }) {
-  const { state, phase, facing, position, currentX, busy, walkTo, greet, celebrate, sleepTo, wake, setState } = useBuddy();
+  const {
+    state,
+    phase,
+    facing,
+    position,
+    currentX,
+    busy,
+    walkTo,
+    greet,
+    celebrate,
+    sleepTo,
+    wake,
+    sayGoodnightAndSleep,
+    showSleepWhisper,
+    evaluateSleepSchedule,
+    isWithinSleepSchedule,
+    setState,
+  } = useBuddy();
+
+  const [simulatedMode, setSimulatedMode] = useState(
+    typeof window !== 'undefined' && window.__buddySimulatedDate ? 'custom' : 'live'
+  );
+
+  const setSimulatedHour = (hour, minute = 0) => {
+    const d = new Date();
+    d.setHours(hour, minute, 0, 0);
+    window.__buddySimulatedDate = d;
+    setSimulatedMode(`${hour}:${minute < 10 ? '0' : ''}${minute}`);
+    evaluateSleepSchedule?.();
+  };
+
+  const resetLiveClock = () => {
+    delete window.__buddySimulatedDate;
+    setSimulatedMode('live');
+    evaluateSleepSchedule?.();
+  };
 
   // [Idle], [Greeting], [Celebrate], and [Sleep] must work from ANY state —
   // always enabled. They cancel any in-progress operation and take over.
@@ -183,6 +219,39 @@ export default function BuddyDevPanel({ className = '' }) {
             disabled: !canWake,
           })}
         />
+      </div>
+
+      <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid rgba(20,20,20,0.08)' }}>
+        <div style={{ fontSize: '10px', color: '#6a6a6a', marginBottom: '6px', fontWeight: 600 }}>
+          SCHEDULE SIMULATOR ({simulatedMode}):
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          <button
+            {...btn('🌙 11 PM', () => setSimulatedHour(23, 0), {
+              active: simulatedMode === '23:00',
+            })}
+          />
+          <button
+            {...btn('💤 2 AM', () => setSimulatedHour(2, 0), {
+              active: simulatedMode === '2:00',
+            })}
+          />
+          <button
+            {...btn('☀️ 6:30 AM', () => setSimulatedHour(6, 30), {
+              active: simulatedMode === '6:30',
+            })}
+          />
+          <button
+            {...btn('Whisper', () => showSleepWhisper?.(), {
+              disabled: phase !== BuddyPhase.SLEEPING,
+            })}
+          />
+          <button
+            {...btn('Live Clock', () => resetLiveClock(), {
+              active: simulatedMode === 'live',
+            })}
+          />
+        </div>
       </div>
     </div>
   );

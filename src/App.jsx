@@ -34,6 +34,7 @@ import {
 } from './lib/recurring';
 import RecurringPrompt from './components/RecurringPrompt';
 import RecurringSection from './components/RecurringSection';
+import NotepadScanModal from './components/NotepadScanModal';
 import { BuddyProvider, useBuddy, Buddy } from './buddy';
 
 function AppContent() {
@@ -73,6 +74,10 @@ function AppContent() {
   const [nudgeAgeDays, setNudgeAgeDays] = useState(0);
   const [isAddBarFocused, setIsAddBarFocused] = useState(false);
   const [highlightedTaskId, setHighlightedTaskId] = useState(null);
+
+  // Notepad photo scan modal states
+  const [scanImageFile, setScanImageFile] = useState(null);
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
 
   // Ref to avatar button to return focus when popover closes
   const avatarButtonRef = useRef(null);
@@ -714,6 +719,51 @@ function AppContent() {
     }
   };
 
+  // Spiral notepad scanner handlers
+  const handleScanPhoto = (file) => {
+    setScanImageFile(file);
+    setIsScanModalOpen(true);
+  };
+
+  const handleBatchAddTasks = async (taskList) => {
+    if (!userId || !taskList || taskList.length === 0) return;
+
+    const baseNow = Date.now();
+    const createdTasks = taskList.map((item, index) => ({
+      id: crypto.randomUUID(),
+      user_id: userId,
+      title: item.title,
+      color: item.color || 'tape-cream',
+      done: false,
+      justAdded: true,
+      created_at: new Date(baseNow + index * 10).toISOString(),
+      completed_at: null,
+      deleted_at: null
+    }));
+
+    const previousTasks = [...tasks];
+    const updatedTasks = [...[...createdTasks].reverse(), ...tasks];
+    setTasks(updatedTasks);
+    buddy.onTaskCreated(taskList[0]?.title);
+
+    showToast(`📌 Stuck ${taskList.length} notepad tasks to your board!`, 'info');
+
+    if (isDemo) return;
+
+    setCachedTasks(userId, updatedTasks);
+
+    try {
+      for (const t of createdTasks) {
+        await insertTaskInDb(t);
+      }
+    } catch (err) {
+      console.error('Failed to save batch tasks:', err);
+      setTasks(previousTasks);
+      setCachedTasks(userId, previousTasks);
+      showToast('Failed to save some tasks. Rolled back.', 'error');
+    }
+  };
+
   // Recurring Event Handlers
   const handleAcceptRecurring = async () => {
     if (!streakPrompt || !userId) return;
@@ -1126,8 +1176,20 @@ function AppContent() {
         <AddBar
           onAddTask={handleAddTask}
           onFocusChange={setIsAddBarFocused}
+          onScanPhoto={handleScanPhoto}
         />
       )}
+
+      {/* Notepad Photo Scanner Modal */}
+      <NotepadScanModal
+        isOpen={isScanModalOpen}
+        imageFile={scanImageFile}
+        onClose={() => {
+          setIsScanModalOpen(false);
+          setScanImageFile(null);
+        }}
+        onStickBatch={handleBatchAddTasks}
+      />
     </div>
   );
 }

@@ -24,4 +24,8 @@ export {
   WALK_FRAME_INTERVAL,
   SULK_DURATION,
   getTimeOfDayGreeting,
+  SLEEP_SCHEDULE,
+  isWithinSleepSchedule,
+  isAtBedtimeThreshold,
+  getBuddyCurrentDate,
 } from './movement';

@@ -35,6 +35,12 @@ import {
   getTimeOfDayGreeting,
   facingForTarget,
   wait,
+  SLEEP_SCHEDULE,
+  GOODNIGHT_BEDTIME_PHRASES,
+  SLEEP_WHISPER_PHRASES,
+  getBuddyCurrentDate,
+  isWithinSleepSchedule,
+  isAtBedtimeThreshold,
 } from './movement';
 
 // Normalized X for each named position: +1 = HOME (right), -1 = AWAY (left),
@@ -119,6 +125,27 @@ const initial = {
 };
 
 function getInitialState(initialState = BuddyState.IDLE) {
+  const now = getBuddyCurrentDate();
+  const inSleep = isWithinSleepSchedule(now);
+  const atBedtime = isAtBedtimeThreshold(now);
+
+  // If opening during deep night sleep (after 11:02 PM and before 6:30 AM),
+  // Buddy starts immediately asleep in bed.
+  if (inSleep && !atBedtime) {
+    return {
+      requested: BuddyState.SLEEPING,
+      resolved: BuddyState.SLEEPING,
+      phase: BuddyPhase.SLEEPING,
+      facing: BuddyFacing.LEFT,
+      position: BuddyPosition.BED,
+      currentX: BED_X,
+      walkTarget: null,
+      turnTarget: null,
+      busy: false,
+      viewMode: 'side',
+    };
+  }
+
   const needsEntrance = shouldPerformEntrance();
   if (needsEntrance) {
     return {
@@ -634,6 +661,10 @@ export function BuddyProvider({ children, initialState = BuddyState.IDLE }) {
 
   const celebrate = useCallback(
     (customText = null) => {
+      const curPhase = stateRef.current.phase;
+      if (curPhase === BuddyPhase.SLEEPING || curPhase === BuddyPhase.LYING_DOWN) {
+        return;
+      }
       const wasBusy = busyRef.current;
       if (wasBusy) {
         cancelRef.current = true;
@@ -702,6 +733,10 @@ export function BuddyProvider({ children, initialState = BuddyState.IDLE }) {
 
   const sulk = useCallback(
     (customText = null) => {
+      const curPhase = stateRef.current.phase;
+      if (curPhase === BuddyPhase.SLEEPING || curPhase === BuddyPhase.LYING_DOWN) {
+        return;
+      }
       const wasBusy = busyRef.current;
       // Do not interrupt active celebration or greeting with sulking
       if (
@@ -836,10 +871,11 @@ export function BuddyProvider({ children, initialState = BuddyState.IDLE }) {
   }, []);
 
   const wake = useCallback(() => {
-    if (!busyRef.current) return;
     const cur = stateRef.current;
     if (cur.phase !== BuddyPhase.SLEEPING) return;
     cancelRef.current = false;
+    busyRef.current = true;
+    checkedUserIdsRef.current.clear();
     (async () => {
       dispatch({ type: 'SLEEP_WAKE_START' });
       if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
@@ -925,6 +961,9 @@ export function BuddyProvider({ children, initialState = BuddyState.IDLE }) {
   const checkDailyGreeting = useCallback(
     (userId = 'demo') => {
       if (!userId) return;
+      if (isWithinSleepSchedule(getBuddyCurrentDate()) || stateRef.current.phase === BuddyPhase.SLEEPING) {
+        return;
+      }
       if (checkedUserIdsRef.current.has(userId)) return;
       checkedUserIdsRef.current.add(userId);
 
@@ -1091,6 +1130,10 @@ export function BuddyProvider({ children, initialState = BuddyState.IDLE }) {
    */
   const onTaskCompleted = useCallback(
     (_title = '', remainingCount = null) => {
+      const curPhase = stateRef.current.phase;
+      if (curPhase === BuddyPhase.SLEEPING || curPhase === BuddyPhase.LYING_DOWN) {
+        return;
+      }
       sessionCompletedCountRef.current += 1;
       cooldownUntilRef.current = Date.now() + 90000;
 
@@ -1125,6 +1168,10 @@ export function BuddyProvider({ children, initialState = BuddyState.IDLE }) {
    */
   const onTaskUncompleted = useCallback(
     (_title = '') => {
+      const curPhase = stateRef.current.phase;
+      if (curPhase === BuddyPhase.SLEEPING || curPhase === BuddyPhase.LYING_DOWN) {
+        return;
+      }
       const now = Date.now();
       // If unchecking multiple tasks quickly (< 5s), do not spam multiple reactions
       if (now - lastTaskUncompletedTimeRef.current < 5000) {
@@ -1277,6 +1324,96 @@ export function BuddyProvider({ children, initialState = BuddyState.IDLE }) {
     };
   }, []);
 
+  const sayGoodnightAndSleep = useCallback(
+    (customText = null) => {
+      const cur = stateRef.current;
+      if (
+        cur.phase === BuddyPhase.SLEEPING ||
+        cur.phase === BuddyPhase.LYING_DOWN ||
+        cur.walkTarget === BuddyPosition.BED
+      ) {
+        return;
+      }
+      const phrase =
+        customText || pickPhrase(GOODNIGHT_BEDTIME_PHRASES, lastSpokenPhraseRef.current);
+      lastSpokenPhraseRef.current = phrase;
+      if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+      setMessage(phrase);
+      messageTimerRef.current = setTimeout(() => {
+        setMessage(null);
+        messageTimerRef.current = null;
+        sleepTo();
+      }, 2400);
+    },
+    [sleepTo]
+  );
+
+  const showSleepWhisper = useCallback(() => {
+    if (stateRef.current.phase !== BuddyPhase.SLEEPING) return;
+    const phrase = pickPhrase(SLEEP_WHISPER_PHRASES, lastSpokenPhraseRef.current);
+    lastSpokenPhraseRef.current = phrase;
+    if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+    setMessage(phrase);
+    messageTimerRef.current = setTimeout(() => {
+      setMessage(null);
+      messageTimerRef.current = null;
+    }, 2400);
+  }, []);
+
+  const evaluateSleepSchedule = useCallback(() => {
+    const now = getBuddyCurrentDate();
+    const inSleep = isWithinSleepSchedule(now);
+    const cur = stateRef.current;
+
+    if (inSleep) {
+      if (
+        cur.phase !== BuddyPhase.SLEEPING &&
+        cur.phase !== BuddyPhase.LYING_DOWN &&
+        cur.walkTarget !== BuddyPosition.BED
+      ) {
+        sayGoodnightAndSleep();
+      }
+    } else {
+      if (cur.phase === BuddyPhase.SLEEPING) {
+        wake();
+      }
+    }
+  }, [sayGoodnightAndSleep, wake]);
+
+  // Periodic sleep schedule monitor (heartbeat + visibilitychange / focus)
+  useEffect(() => {
+    const interval = setInterval(evaluateSleepSchedule, 15000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        evaluateSleepSchedule();
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    // Initial check on mount
+    const mountTimer = setTimeout(() => {
+      const now = getBuddyCurrentDate();
+      if (isWithinSleepSchedule(now)) {
+        const cur = stateRef.current;
+        if (
+          cur.phase !== BuddyPhase.SLEEPING &&
+          cur.phase !== BuddyPhase.LYING_DOWN &&
+          cur.walkTarget !== BuddyPosition.BED
+        ) {
+          sayGoodnightAndSleep();
+        }
+      }
+    }, 600);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(mountTimer);
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
+  }, [evaluateSleepSchedule, sayGoodnightAndSleep]);
+
   const value = useMemo(
     () => ({
       state: internal.resolved,
@@ -1296,6 +1433,10 @@ export function BuddyProvider({ children, initialState = BuddyState.IDLE }) {
       sulk,
       sleepTo,
       wake,
+      sayGoodnightAndSleep,
+      showSleepWhisper,
+      evaluateSleepSchedule,
+      isWithinSleepSchedule,
       setState,
       reset,
       resetToIdle,
@@ -1315,6 +1456,10 @@ export function BuddyProvider({ children, initialState = BuddyState.IDLE }) {
       sulk,
       sleepTo,
       wake,
+      sayGoodnightAndSleep,
+      showSleepWhisper,
+      evaluateSleepSchedule,
+      isWithinSleepSchedule,
       setState,
       reset,
       resetToIdle,

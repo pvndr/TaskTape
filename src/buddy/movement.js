@@ -227,3 +227,58 @@ export function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// --- Scheduled Sleep & Wake (Bedtime: 11:00 PM / 23:00, Wake: 6:30 AM / 06:30) ---
+export const SLEEP_SCHEDULE = {
+  BEDTIME_HOUR: 23,
+  BEDTIME_MINUTE: 0,
+  WAKE_HOUR: 6,
+  WAKE_MINUTE: 30,
+};
+
+export const GOODNIGHT_BEDTIME_PHRASES = [
+  'Getting sleepy... Good night! 🌙',
+  'Time for bed! See you in the morning 😴',
+  '11 PM already! Good night da 🌙',
+];
+
+export const SLEEP_WHISPER_PHRASES = [
+  'Zzz… still sleepy time 🌙',
+  'Shh… see you at 6:30 AM 😴',
+  'Yawn… back to sleep 💤',
+  'Bedtime… see you in the morning 🌙',
+];
+
+/**
+ * Returns current date, respecting optional dev simulated clock.
+ */
+export function getBuddyCurrentDate() {
+  if (typeof window !== 'undefined' && window.__buddySimulatedDate instanceof Date) {
+    return window.__buddySimulatedDate;
+  }
+  return new Date();
+}
+
+/**
+ * Checks if the given date falls into the scheduled sleep window:
+ * From 23:00 (11:00 PM) until 06:30 (6:30 AM).
+ */
+export function isWithinSleepSchedule(date = getBuddyCurrentDate()) {
+  const h = date.getHours();
+  const m = date.getMinutes();
+  const currentMinutes = h * 60 + m;
+
+  const bedtimeMinutes = SLEEP_SCHEDULE.BEDTIME_HOUR * 60 + SLEEP_SCHEDULE.BEDTIME_MINUTE; // 1380
+  const wakeMinutes = SLEEP_SCHEDULE.WAKE_HOUR * 60 + SLEEP_SCHEDULE.WAKE_MINUTE; // 390
+
+  return currentMinutes >= bedtimeMinutes || currentMinutes < wakeMinutes;
+}
+
+/**
+ * Checks if the current time is right at bedtime (11:00 PM) or within a couple of minutes (23:00 to 23:02).
+ */
+export function isAtBedtimeThreshold(date = getBuddyCurrentDate()) {
+  const h = date.getHours();
+  const m = date.getMinutes();
+  return h === 23 && m >= 0 && m <= 2;
+}
+

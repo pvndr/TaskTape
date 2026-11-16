@@ -30,14 +30,14 @@ export default function RecurringPrompt({ title, color, onAccept, onDismiss }) {
           <button
             type="button"
             onClick={onDismiss}
-            className="px-2.5 py-1.5 rounded text-xs font-semibold text-kraft-dark/70 hover:text-kraft-dark hover:bg-black/5 transition-all"
+            className="min-h-[40px] px-3 py-2 rounded text-xs font-semibold text-kraft-dark/70 hover:text-kraft-dark hover:bg-black/5 transition-all cursor-pointer flex items-center"
           >
             Not now
           </button>
           <button
             type="button"
             onClick={onAccept}
-            className="px-3.5 py-1.5 rounded bg-kraft-dark text-tape-cream text-xs font-bold font-sans hover:bg-kraft-dark/90 active:scale-95 transition-all shadow-xs flex items-center gap-1.5"
+            className="min-h-[40px] px-4 py-2 rounded bg-kraft-dark text-tape-cream text-xs font-bold font-sans hover:bg-kraft-dark/90 active:scale-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <span>Save to Recurring</span>
             <span className="text-[10px]">✨</span>

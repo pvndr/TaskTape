@@ -55,7 +55,7 @@ export default function RecurringSection({
         <button
           type="button"
           onClick={() => setIsCollapsed((prev) => !prev)}
-          className="text-xs font-sans font-medium text-kraft-dark/70 hover:text-kraft-dark px-2 py-1 rounded hover:bg-black/5 transition-all flex items-center gap-1"
+          className="min-h-[40px] px-2.5 py-1 text-xs font-sans font-medium text-kraft-dark/70 hover:text-kraft-dark rounded hover:bg-black/5 transition-all flex items-center gap-1 cursor-pointer"
           aria-expanded={!isCollapsed}
           aria-label={isCollapsed ? 'Expand recurring events' : 'Collapse recurring events'}
         >
@@ -113,7 +113,7 @@ export default function RecurringSection({
                       <button
                         type="button"
                         onClick={() => onStickToday(item)}
-                        className="px-2.5 py-1 text-xs font-bold font-sans rounded bg-kraft-dark text-tape-cream hover:bg-kraft-dark/90 active:scale-95 transition-all shadow-xs flex items-center gap-1"
+                        className="min-h-[40px] px-3 py-1 text-xs font-bold font-sans rounded bg-kraft-dark text-tape-cream hover:bg-kraft-dark/90 active:scale-95 transition-all shadow-xs flex items-center gap-1 cursor-pointer"
                         title="Stick this recurring task to today's board"
                       >
                         <span>+ Stick</span>
@@ -123,7 +123,7 @@ export default function RecurringSection({
                     <button
                       type="button"
                       onClick={() => onRemoveRecurring(item)}
-                      className="p-1 rounded text-kraft-dark/50 hover:text-red-700 hover:bg-black/10 active:scale-90 transition-all opacity-70 group-hover:opacity-100"
+                      className="min-h-[40px] min-w-[40px] p-2 flex items-center justify-center rounded text-kraft-dark/50 hover:text-red-700 hover:bg-black/10 active:scale-90 transition-all opacity-70 group-hover:opacity-100 cursor-pointer"
                       title="Remove from recurring events"
                       aria-label={`Remove ${item.title} from recurring`}
                     >

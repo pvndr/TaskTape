@@ -28,6 +28,8 @@ export default function Buddy({ className = '' }) {
     busy,
     greet,
     wake,
+    showSleepWhisper,
+    isWithinSleepSchedule,
     setState,
   } = useBuddy();
 
@@ -73,11 +75,16 @@ export default function Buddy({ className = '' }) {
   const buddyZIndex = isLying ? 2 : 2;
 
   // Tap handler on Buddy:
-  // If sleeping -> wake him up
+  // If sleeping during bedtime -> whisper sleepy response and stay in bed
+  // If sleeping outside bedtime -> wake him up
   // If idle -> say hello with wave
   // If busy -> return to idle
   const handleCharacterClick = () => {
     if (phase === BuddyPhase.SLEEPING) {
+      if (isWithinSleepSchedule && isWithinSleepSchedule()) {
+        showSleepWhisper?.();
+        return;
+      }
       wake();
     } else if (!busy && phase === BuddyPhase.IDLE) {
       greet();

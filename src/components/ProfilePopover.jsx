@@ -8,6 +8,7 @@ import {
   getCurrentPushSubscription,
   unsubscribePushDevice
 } from '../lib/push';
+import { getGeminiApiKey, setGeminiApiKey } from '../lib/geminiVision';
 
 export function getUserDisplayName(user) {
   if (!user) return 'User';
@@ -54,6 +55,11 @@ export default function ProfilePopover({
   const [nameInput, setNameInput] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Gemini Vision API Key state
+  const [geminiKey, setGeminiKeyState] = useState('');
+  const [isEditingKey, setIsEditingKey] = useState(false);
+  const [keyInput, setKeyInput] = useState('');
+
   // Push notification state
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [remindHour, setRemindHour] = useState(9);
@@ -71,6 +77,25 @@ export default function ProfilePopover({
   const totalStuck = nonClearedTasks.length;
   const totalDone = nonClearedTasks.filter((t) => t.done).length;
   const nudgesEnabled = user?.user_metadata?.nudges_enabled !== false;
+
+  // Sync Gemini key when popover opens
+  useEffect(() => {
+    if (isOpen) {
+      const key = getGeminiApiKey();
+      setGeminiKeyState(key);
+      setKeyInput(key);
+      setIsEditingKey(false);
+    }
+  }, [isOpen]);
+
+  const handleSaveGeminiKey = (e) => {
+    e.preventDefault();
+    const clean = keyInput.trim();
+    setGeminiApiKey(clean);
+    setGeminiKeyState(clean);
+    setIsEditingKey(false);
+    onToast?.(clean ? 'Gemini API key saved!' : 'Gemini API key cleared.', 'info');
+  };
 
   // Check push subscription state when popover opens
   useEffect(() => {
@@ -539,6 +564,82 @@ export default function ProfilePopover({
             )}
           </div>
         )}
+
+        {/* Spiral Notepad Vision Settings */}
+        <div className="my-3 py-2.5 px-3 rounded-lg bg-black/5 border border-kraft-border/50 font-sans space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-kraft-dark flex items-center gap-1.5">
+              <span>📸</span>
+              <span>Notepad Scanner</span>
+            </span>
+            {geminiKey ? (
+              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 select-none">
+                Custom Key
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-300 select-none">
+                Cloud Vision
+              </span>
+            )}
+          </div>
+
+          <p className="text-[11px] text-kraft-dark/65 leading-tight">
+            Deciphers handwritten to-dos from your spiral pad using cloud vision. No setup required for end users.
+          </p>
+
+          {isEditingKey ? (
+            <form onSubmit={handleSaveGeminiKey} className="space-y-2 pt-1">
+              <input
+                type="password"
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                placeholder="Paste Gemini API Key..."
+                className="w-full text-xs px-2.5 py-1.5 rounded bg-white/90 border border-kraft-border/70 text-kraft-dark focus:outline-none focus:ring-2 focus:ring-kraft-dark/40 shadow-inner"
+              />
+              <div className="flex items-center justify-between text-[10px]">
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-amber-900 hover:text-amber-950 font-medium"
+                >
+                  Get free key ↗
+                </a>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setKeyInput(geminiKey);
+                      setIsEditingKey(false);
+                    }}
+                    className="px-2 py-0.5 text-xs text-kraft-dark/70 hover:text-kraft-dark cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-2.5 py-0.5 text-xs font-bold rounded bg-kraft-dark text-tape-cream hover:bg-kraft-dark/90 cursor-pointer"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </form>
+          ) : (
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[11px] text-kraft-dark/60 font-mono">
+                {geminiKey ? `••••••••${geminiKey.slice(-4)}` : 'No API key set'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsEditingKey(true)}
+                className="text-xs font-semibold text-amber-900 hover:text-amber-950 underline underline-offset-2 cursor-pointer"
+              >
+                {geminiKey ? 'Change' : 'Configure'}
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Sign Out action */}
         <div className="pt-2">
